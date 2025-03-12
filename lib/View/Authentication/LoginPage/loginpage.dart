@@ -2,7 +2,9 @@ import 'package:ambulance_service/Model/Authentication/auth.dart';
 import 'package:ambulance_service/View/Authentication/SignupPage/signuppage.dart';
 import 'package:ambulance_service/View/HomePage/homepage.dart';
 import 'package:flutter/material.dart';
-
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -17,22 +19,58 @@ class _LoginPageState extends State<LoginPage> {
   String? _errorMessage;
 
   final AuthService _authService = AuthService();
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  void login() async {
-    final user = await _authService.loginUserWithEmailAndPassword(
-      emailController.text,
-      passwordController.text,
-    );
 
-    if (user == null) {
-      setState(() {
-        _errorMessage = "Failed to login. Please check your credentials.";
-      });
+   void login() async {
+  // First validate the login credentials without requesting permissions
+  final user = await _authService.loginUserWithEmailAndPassword(
+    emailController.text,
+    passwordController.text,
+  );
+
+  if (user == null) {
+    setState(() {
+      _errorMessage = "Failed to login. Please check your credentials.";
+    });
+  } else {
+    // Login successful, now request location permissions
+    if (await Permission.location.isDenied) {
+      PermissionStatus status = await Permission.location.request();
+      
+      // Check if permission was granted
+      if (status.isGranted) {
+            Position position = await Geolocator.getCurrentPosition(
+            desiredAccuracy: LocationAccuracy.high);
+          await _firestore.collection('user_locations').doc(user.uid).set({
+          'uid': user.uid,
+          'latitude': position.latitude,
+          'longitude': position.longitude,
+          'timestamp': FieldValue.serverTimestamp(),
+        });
+        // Navigate to the LocationTracker page
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => Homepage(),
+          ),
+        );
+      } else {
+        setState(() {
+          _errorMessage = "Location permissions are required to proceed.";
+        });
+      }
     } else {
-      // Navigate to the home page or show a success message
-      Navigator.push(context, MaterialPageRoute(builder: (context)=>Homepage()));
+      // Permission was already granted, navigate directly
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => Homepage(),
+        ),
+      );
     }
   }
+}
 
   @override
   Widget build(BuildContext context) {

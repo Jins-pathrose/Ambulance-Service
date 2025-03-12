@@ -52,6 +52,7 @@ class _SplashscreenState extends State<Splashscreen> with SingleTickerProviderSt
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             FadeTransition(
               opacity: _animation,
