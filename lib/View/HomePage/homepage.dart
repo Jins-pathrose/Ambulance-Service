@@ -1,11 +1,12 @@
 import 'dart:math';
-
+import 'package:ambulance_service/View/HomePage/detailpage.dart';
 import 'package:ambulance_service/View/LocationScreen/locationscreen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class Homepage extends StatefulWidget {
   const Homepage({super.key});
@@ -15,7 +16,7 @@ class Homepage extends StatefulWidget {
 }
 
 class _HomepageState extends State<Homepage> {
- final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
   String searchQuery = '';
   bool _isLoading = true;
@@ -63,6 +64,7 @@ class _HomepageState extends State<Homepage> {
       }
       
       // After getting user location, fetch drivers
+     // After getting user location, fetch drivers
       await _fetchDrivers();
       
     } catch (e) {
@@ -245,6 +247,25 @@ class _HomepageState extends State<Homepage> {
     );
   }
   
+  // Make a phone call
+  Future<void> _makePhoneCall(String phoneNumber) async {
+    final Uri launchUri = Uri(
+      scheme: 'tel',
+      path: phoneNumber,
+    );
+    
+    try {
+      await launchUrl(launchUri);
+    } catch (e) {
+      print('Could not launch phone call: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Could not launch phone call'),
+        ),
+      );
+    }
+  }
+  
   @override
   Widget build(BuildContext context) {
     final filteredDrivers = _getFilteredDrivers();
@@ -330,6 +351,15 @@ class _HomepageState extends State<Homepage> {
                           borderRadius: BorderRadius.circular(8.0),
                         ),
                         child: ListTile(
+                          onTap: () {
+                            // Navigate to driver detail screen
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => DriverDetailScreen(driver: driver),
+                              ),
+                            );
+                          },
                           leading: CircleAvatar(
                             backgroundColor: Colors.blue.shade700,
                             child: Text(
@@ -365,9 +395,7 @@ class _HomepageState extends State<Homepage> {
                           ),
                           trailing: IconButton(
                             icon: const Icon(Icons.phone, color: Colors.black),
-                            onPressed: () {
-                              // Implement call functionality
-                            },
+                            onPressed: () => _makePhoneCall(phone),
                           ),
                           isThreeLine: true,
                         ),
